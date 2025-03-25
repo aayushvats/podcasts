@@ -29,7 +29,7 @@ class PodcastService {
     private let baseUrl = "https://api.podcastindex.org/api/1.0/search/byterm"
     
     func searchPodcasts(query: String, completion: @escaping ([Podcast]?) -> Void) {
-        let apiHeaderTime = String(Int(Date().timeIntervalSince1970))  // Ensure fresh timestamp
+        let apiHeaderTime = String(Int(Date().timeIntervalSince1970))
         let hashInput = apiKey + apiSecret + apiHeaderTime
         let hash = hashInput.sha1()
         
