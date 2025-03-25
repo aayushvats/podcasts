@@ -14,8 +14,21 @@ extension String {
 }
 
 struct Podcast: Codable {
+    let id: Int
     let title: String
     let url: String
+    let originalUrl: String
+    let link: String
+    let description: String
+    let author: String
+    let ownerName: String
+    let image: String
+    let artwork: String
+    let language: String
+    let explicit: Bool
+    let podcastGuid: String
+    let medium: String
+    let episodeCount: Int
 }
 
 struct PodcastResponse: Codable {
