@@ -4,10 +4,30 @@ import AVKit
 struct PodcastDetailsView: View {
     let feedUrl: String
     let title: String
+    let artwork: String
     @State private var episodes: [Episode] = []
 
     var body: some View {
         VStack {
+            AsyncImage(url: URL(string: artwork)) { phase in
+                if let image = phase.image {
+                    image
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 200, height: 200)
+                        .cornerRadius(15)
+                        .padding()
+                } else if phase.error != nil {
+                    Color.gray
+                        .frame(width: 200, height: 200)
+                        .cornerRadius(15)
+                        .padding()
+                } else {
+                    ProgressView()
+                        .frame(width: 200, height: 200)
+                        .padding()
+                }
+            }
             List(episodes) { episode in
                 NavigationLink(destination: PodcastPlayerView(episodeTitle: episode.title, audioUrl: episode.audioURL)) {
                     Text(episode.title)
