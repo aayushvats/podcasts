@@ -35,6 +35,12 @@ struct PodcastResponse: Codable {
     let feeds: [Podcast]
 }
 
+struct Episode: Identifiable {
+    let id = UUID() // Unique identifier for each episode
+    let title: String
+    let audioURL: String
+}
+
 class PodcastService {
     static let shared = PodcastService()
     private let apiKey = "XSSTN3RL8VL7PPKAFSLS"

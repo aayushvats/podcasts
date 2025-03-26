@@ -2,11 +2,12 @@ import SwiftUI
 import AVKit
 
 struct PodcastPlayerView: View {
-    let feedUrl: String
+//    let feedUrl: String
+    
+    let episodeTitle: String
+    let audioUrl: String
     @State private var player: AVPlayer?
-    @State private var episodeTitle: String = "Loading..."
-    @State private var audioUrl: String = ""
-
+    
     var body: some View {
         VStack {
             Text(episodeTitle)
@@ -29,13 +30,13 @@ struct PodcastPlayerView: View {
     }
 
     func fetchEpisodes() {
-        RSSParser().parseRSS(url: feedUrl) { episodes in
-            if let firstEpisode = episodes.first {
-                episodeTitle = firstEpisode.0
-                audioUrl = firstEpisode.1
+//        RSSParser().parseRSS(url: feedUrl) { episodes in
+//            if let firstEpisode = episodes.first {
+//                episodeTitle = firstEpisode.0
+//                audioUrl = firstEpisode.1
                 player = AVPlayer(url: URL(string: audioUrl)!)
-            }
-        }
+//            }
+//        }
     }
 
     func togglePlayPause() {

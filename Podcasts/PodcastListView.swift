@@ -9,19 +9,21 @@ struct PodcastListView: View {
             VStack {
                 TextField("Search Podcasts...", text: $searchQuery, onCommit: fetchPodcasts)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .padding(EdgeInsets(top: 5, leading: 8, bottom: 0, trailing: 8))
+                    .padding(EdgeInsets(top: 5, leading: 10, bottom: 0, trailing: 10))
 
                 List(podcasts, id: \.url) { podcast in
-                    NavigationLink(destination: PodcastPlayerView(feedUrl: podcast.url)) {
-                        VStack {
-                            Text(podcast.title)
-                            Text(podcast.author)
+                    NavigationLink(destination: PodcastDetailsView(
+                        feedUrl: podcast.url,
+                        title: podcast.title)) {
+                        VStack(alignment: .leading) {
+                            Text(podcast.title).font(.headline)
+                            Text(podcast.author).font(.caption)
                         }
                         
                     }
                 }
             }
-            .navigationTitle("Podcast Search")
+            .navigationTitle("Podcasts")
         }
     }
 
