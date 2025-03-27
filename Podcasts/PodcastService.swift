@@ -13,7 +13,7 @@ extension String {
   }
 }
 
-struct Podcast: Codable {
+struct Podcast: Codable, Hashable {
     let id: Int
     let title: String
     let url: String
