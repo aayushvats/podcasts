@@ -1,5 +1,6 @@
 import Foundation
 import CommonCrypto
+import SwiftUI
 
 extension String {
   func sha1() -> String {
@@ -29,7 +30,9 @@ struct Podcast: Codable, Hashable {
     let podcastGuid: String
     let medium: String
     let episodeCount: Int
+    var artworkData: [UInt8]? // New property to store image data as UInt8 array
 }
+
 
 struct PodcastResponse: Codable {
     let feeds: [Podcast]
@@ -59,11 +62,6 @@ class PodcastService {
             return
         }
         
-        print("Requesting: \(url)")
-        print("X-Auth-Date: \(apiHeaderTime)")
-        print("Hash Input: \(hashInput)")
-        print("Computed Hash: \(hash)")
-        
         var request = URLRequest(url: url, timeoutInterval: 30)
         request.httpMethod = "GET"
         request.addValue("MyUniquePodcastApp/1.0 (contact@example.com)", forHTTPHeaderField: "User-Agent")
@@ -78,29 +76,81 @@ class PodcastService {
                 return
             }
 
-            guard let httpResponse = response as? HTTPURLResponse else {
-                print("Invalid response")
-                completion(nil)
-                return
-            }
-            
-            print("Response Code: \(httpResponse.statusCode)")
-
-            guard let data = data, httpResponse.statusCode == 200 else {
-                print("Failed with status: \(httpResponse)")
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200,
+                  let data = data else {
+                print("Failed with status: \(String(describing: response))")
                 completion(nil)
                 return
             }
 
             do {
                 let decodedResponse = try JSONDecoder().decode(PodcastResponse.self, from: data)
-                DispatchQueue.main.async {
-                    completion(decodedResponse.feeds)
+                
+                // Create a mutable copy of the podcasts array
+                var podcasts = decodedResponse.feeds
+                
+                // Fetch images for each podcast
+                let group = DispatchGroup()
+                for i in podcasts.indices {
+                    group.enter()
+                    self.fetchImageData(from: podcasts[i].artwork) { imageData in
+                        if let imageData = imageData {
+                            podcasts[i] = Podcast(
+                                id: podcasts[i].id,
+                                title: podcasts[i].title,
+                                url: podcasts[i].url,
+                                originalUrl: podcasts[i].originalUrl,
+                                link: podcasts[i].link,
+                                description: podcasts[i].description,
+                                author: podcasts[i].author,
+                                ownerName: podcasts[i].ownerName,
+                                image: podcasts[i].image,
+                                artwork: podcasts[i].artwork,
+                                language: podcasts[i].language,
+                                explicit: podcasts[i].explicit,
+                                podcastGuid: podcasts[i].podcastGuid,
+                                medium: podcasts[i].medium,
+                                episodeCount: podcasts[i].episodeCount,
+                                artworkData: Array(imageData) // Convert Data to [UInt8]
+                            )
+                        }
+                        group.leave()
+                    }
+                }
+                
+                group.notify(queue: .main) {
+                    completion(podcasts)
                 }
             } catch {
                 print("Decoding Error: \(error)")
                 completion(nil)
             }
         }.resume()
+    }
+
+    private func fetchImageData(from urlString: String, completion: @escaping (Data?) -> Void) {
+        guard let url = URL(string: urlString) else {
+            completion(nil)
+            return
+        }
+        
+        URLSession.shared.dataTask(with: url) { data, _, error in
+            if let error = error {
+                print("Image Fetch Error: \(error.localizedDescription)")
+                completion(nil)
+                return
+            }
+            completion(data)
+        }.resume()
+    }
+}
+
+/// Converts [UInt8] to UIImage
+func convertToUIImage(from bytes: [UInt8]?) -> UIImage? {
+    if(bytes == nil) {
+        return UIImage(named: "Vinyl Disk")
+    }else{
+        let data = Data(bytes ?? [])
+        return UIImage(data: data)
     }
 }
