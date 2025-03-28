@@ -86,10 +86,10 @@ class PodcastService {
             do {
                 let decodedResponse = try JSONDecoder().decode(PodcastResponse.self, from: data)
                 
-                // Create a mutable copy of the podcasts array
-                var podcasts = decodedResponse.feeds
-                
-                // Fetch images for each podcast
+                // Limit to top 10 results
+                var podcasts = Array(decodedResponse.feeds.prefix(10))
+
+                // Fetch images for the top 10 podcasts
                 let group = DispatchGroup()
                 for i in podcasts.indices {
                     group.enter()
@@ -127,6 +127,7 @@ class PodcastService {
             }
         }.resume()
     }
+
 
     private func fetchImageData(from urlString: String, completion: @escaping (Data?) -> Void) {
         guard let url = URL(string: urlString) else {
