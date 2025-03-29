@@ -10,10 +10,12 @@ struct PodcastFullScreenView: View {
     @State private var showStackedImages = false
     @State private var rotationAngle: Double = -100
     @State private var vinylOffset: CGFloat = 0
+    @State private var selectedEpisode: Episode?  // <-- Track selected episode
 
     var body: some View {
-        NavigationView {
+        ZStack {
             VStack(alignment: .leading) {
+                // Close Button
                 HStack {
                     Spacer()
                     Image(systemName: "xmark.circle.fill")
@@ -32,27 +34,28 @@ struct PodcastFullScreenView: View {
                             }
                         }
                 }
+
+                // Podcast Artwork
                 HStack {
                     if showStackedImages {
                         ZStack {
                             Image("Vinyl Disk")
                                 .resizable()
                                 .scaledToFit()
+                                .matchedGeometryEffect(id: "vinyl_disk_\(podcast.title)", in: namespace)
                                 .frame(width: 145, height: 145)
                                 .rotationEffect(.degrees(rotationAngle))
                                 .offset(x: vinylOffset)
                                 .zIndex(0)
                                 .animation(.easeInOut(duration: 0.8), value: vinylOffset)
-                            
+
                             Image(uiImage: (convertToUIImage(from: podcast.artworkData) ?? UIImage(named: "Vinyl Disk"))!)
                                 .resizable()
                                 .scaledToFit()
                                 .matchedGeometryEffect(id: "image_\(podcast.url)", in: namespace)
                                 .frame(width: 150, height: 150)
-                                .zIndex(1)
                         }
-                    }
-                    else {
+                    } else {
                         Image(uiImage: (convertToUIImage(from: podcast.artworkData) ?? UIImage(named: "Vinyl Disk"))!)
                             .resizable()
                             .scaledToFit()
@@ -62,7 +65,8 @@ struct PodcastFullScreenView: View {
                 }
                 .padding(.leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                
+
+                // Podcast Title & Author
                 Text(podcast.title)
                     .font(.custom("MinecraftSevenCyrillicrussian", size: 20))
                     .multilineTextAlignment(.leading)
@@ -72,20 +76,19 @@ struct PodcastFullScreenView: View {
                     .foregroundColor(.gray)
                     .multilineTextAlignment(.leading)
                     .padding(.horizontal, 20)
-                
+
+                // Episodes Section
                 Text("Episodes")
                     .font(.custom("MinecraftSevenCyrillicrussian", size: 15))
-                //                .foregroundColor(.gray)
                     .multilineTextAlignment(.leading)
                     .padding(EdgeInsets(top: 15, leading: 20, bottom: 8, trailing: 0))
-                
+
                 if isLoadingEpisodes {
                     VStack {
                         Spacer()
                         ProgressView()
                             .progressViewStyle(CircularProgressViewStyle(tint: .white))
                             .scaleEffect(1)
-                        
                         Spacer()
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -93,9 +96,13 @@ struct PodcastFullScreenView: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 10) {
                             ForEach(episodes, id: \.title) { episode in
-                                NavigationLink(destination: PodcastPlayerView(episodeTitle: episode.title, audioUrl: episode.audioURL)) {
+                                Button(action: {
+                                    withAnimation(.smooth(duration: 1)) {
+                                        selectedEpisode = episode
+                                    }
+                                }) {
                                     Text(episode.title)
-                                        .font(.headline)
+                                        .font(.custom("MinecraftSevenCyrillicrussian", size: 16))
                                         .foregroundColor(.white)
                                         .padding()
                                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -121,7 +128,6 @@ struct PodcastFullScreenView: View {
                     withAnimation(.easeInOut(duration: 0.8)) {
                         rotationAngle = 0
                     }
-                    
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         withAnimation(.easeInOut(duration: 0.8)) {
                             vinylOffset = UIScreen.main.bounds.width * 0.25
@@ -129,9 +135,27 @@ struct PodcastFullScreenView: View {
                     }
                 }
             }
+
+            // Place the PodcastPlayerView inside the same ZStack
+            if let episode = selectedEpisode {
+                PodcastPlayerView(
+                    namespace: namespace,
+                    title: podcast.title,
+                    episodeTitle: episode.title,
+                    audioUrl: episode.audioURL,
+                    dismissAction: {
+                        withAnimation(.spring()) {
+                            selectedEpisode = nil
+                        }
+                    }
+                )
+                .transition(.move(edge: .bottom))
+                .zIndex(1)
+            }
         }
+
     }
-    
+
     func getEpisodes() {
         parseEpisodes { episodes in
             self.episodes = episodes.map {
@@ -145,11 +169,10 @@ struct PodcastFullScreenView: View {
                         .trimmingCharacters(in: .whitespacesAndNewlines),
                     audioURL: $0.1)
             }
-            print(self.episodes)
             isLoadingEpisodes = false
         }
     }
-    
+
     func parseEpisodes(completion: @escaping ([(title: String, audioURL: String)]) -> Void) {
         RSSParser().parseRSS(url: podcast.url) { episodes in
             DispatchQueue.main.async {

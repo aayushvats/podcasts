@@ -2,6 +2,7 @@ import SwiftUI
 import AVKit
 
 struct PodcastDetailsView: View {
+    let namespace: Namespace.ID
     let feedUrl: String
     let title: String
     let artwork: String
@@ -29,7 +30,19 @@ struct PodcastDetailsView: View {
                 }
             }
             List(episodes) { episode in
-                NavigationLink(destination: PodcastPlayerView(episodeTitle: episode.title, audioUrl: episode.audioURL)) {
+                NavigationLink(
+                    destination: PodcastPlayerView(
+                        namespace: namespace,
+                        title: title,
+                        episodeTitle: episode.title,
+                        audioUrl: episode.audioURL,
+                        dismissAction: {
+                            withAnimation(.spring()) {
+//                                selectedEpisode = nil
+                            }
+                        }
+                    )
+                ){
                     Text(episode.title)
                 }
             }.navigationTitle(title).navigationBarTitleDisplayMode(.automatic)
