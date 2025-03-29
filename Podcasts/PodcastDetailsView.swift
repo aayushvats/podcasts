@@ -29,23 +29,23 @@ struct PodcastDetailsView: View {
                         .padding()
                 }
             }
-            List(episodes) { episode in
-                NavigationLink(
-                    destination: PodcastPlayerView(
-                        namespace: namespace,
-                        title: title,
-                        episodeTitle: episode.title,
-                        audioUrl: episode.audioURL,
-                        dismissAction: {
-                            withAnimation(.spring()) {
-//                                selectedEpisode = nil
-                            }
-                        }
-                    )
-                ){
-                    Text(episode.title)
-                }
-            }.navigationTitle(title).navigationBarTitleDisplayMode(.automatic)
+//            List(episodes) { episode in
+//                NavigationLink(
+//                    destination: PodcastPlayerView(
+//                        namespace: namespace,
+//                        title: title,
+//                        episodeTitle: episode.title,
+//                        audioUrl: episode.audioURL,
+//                        dismissAction: {
+//                            withAnimation(.spring()) {
+////                                selectedEpisode = nil
+//                            }
+//                        }
+//                    )
+//                ){
+//                    Text(episode.title)
+//                }
+//            }.navigationTitle(title).navigationBarTitleDisplayMode(.automatic)
         }
         .onAppear {
             fetchEpisodes{episodes in

@@ -47,13 +47,14 @@ struct PodcastFullScreenView: View {
                                 .rotationEffect(.degrees(rotationAngle))
                                 .offset(x: vinylOffset)
                                 .zIndex(0)
-                                .animation(.easeInOut(duration: 0.8), value: vinylOffset)
+//                                .animation(.easeInOut(duration: 0.8), value: vinylOffset)
 
                             Image(uiImage: (convertToUIImage(from: podcast.artworkData) ?? UIImage(named: "Vinyl Disk"))!)
                                 .resizable()
                                 .scaledToFit()
                                 .matchedGeometryEffect(id: "image_\(podcast.url)", in: namespace)
                                 .frame(width: 150, height: 150)
+                                .zIndex(2)
                         }
                     } else {
                         Image(uiImage: (convertToUIImage(from: podcast.artworkData) ?? UIImage(named: "Vinyl Disk"))!)
@@ -143,6 +144,7 @@ struct PodcastFullScreenView: View {
                     title: podcast.title,
                     episodeTitle: episode.title,
                     audioUrl: episode.audioURL,
+                    podcastGuid: podcast.podcastGuid,
                     dismissAction: {
                         withAnimation(.spring()) {
                             selectedEpisode = nil
@@ -153,11 +155,12 @@ struct PodcastFullScreenView: View {
                 .zIndex(1)
             }
         }
-
+        .ignoresSafeArea(.container, edges: .bottom)
     }
 
     func getEpisodes() {
         parseEpisodes { episodes in
+            print(episodes)
             self.episodes = episodes.map {
                 Episode(
                     title: ($0.0.trimmingCharacters(in: .whitespacesAndNewlines)
