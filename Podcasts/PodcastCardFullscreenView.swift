@@ -4,6 +4,8 @@ struct PodcastFullScreenView: View {
     let podcast: Podcast
     @Binding var isShowingDetailView: Bool
     let namespace: Namespace.ID
+    @EnvironmentObject var audioManager: AudioManager
+    
     @State private var isAnimating = false
     @State private var isLoadingEpisodes = true
     @State private var episodes: [Episode] = []
@@ -98,6 +100,7 @@ struct PodcastFullScreenView: View {
                         VStack(alignment: .leading, spacing: 10) {
                             ForEach(episodes, id: \.title) { episode in
                                 Button(action: {
+                                    audioManager.playEpisode(episode: episode, podcast: podcast)
                                     withAnimation(.smooth(duration: 1)) {
                                         selectedEpisode = episode
                                     }
@@ -141,15 +144,16 @@ struct PodcastFullScreenView: View {
             if let episode = selectedEpisode {
                 PodcastPlayerView(
                     namespace: namespace,
-                    title: podcast.title,
-                    episodeTitle: episode.title,
-                    audioUrl: episode.audioURL,
-                    podcastGuid: podcast.podcastGuid,
+//                    title: podcast.title,
+//                    episodeTitle: episode.title,
+//                    audioUrl: episode.audioURL,
+//                    podcastGuid: podcast.podcastGuid,
                     dismissAction: {
                         withAnimation(.spring()) {
                             selectedEpisode = nil
                         }
-                    }
+                    },
+                    isPlayedNow: true
                 )
                 .transition(.move(edge: .bottom))
                 .zIndex(1)

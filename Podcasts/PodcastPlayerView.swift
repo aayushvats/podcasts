@@ -2,38 +2,55 @@ import SwiftUI
 import AVKit
 
 struct PodcastPlayerView: View {
+    @EnvironmentObject var audioManager: AudioManager
     let namespace: Namespace.ID
-    let title: String
-    let episodeTitle: String
-    let audioUrl: String
-    let podcastGuid: String
-    let dismissAction: () -> Void
-    @State private var player: AVPlayer?
-    @State private var playerTime: Double = 0.0
-    @State private var duration: Double = 1.0
+//    let title: String
+//    let episodeTitle: String
+//    let audioUrl: String
+    var dismissAction: (() -> Void)? = nil
+    var isPlayedNow: Bool = false
+//    @State private var player: AVPlayer?
+//    @State private var playerTime: Double = 0.0
+//    @State private var duration: Double = 1.0
     @State private var rotationAngle: Double = 0
-    @State private var isPlaying: Bool = false
+//    @State private var isPlaying: Bool = false
     @State private var rotationTimer: Timer?
+    
+    private var podcastTitle: String { audioManager.currentPodcast?.title ?? "Podcast" }
+    private var episodeTitle: String { audioManager.currentEpisode?.title ?? "Episode" }
+//    private var artworkData: Data? { audioManager.currentPodcast?.artworkData } // Need artwork in AudioManager or pass Podcast
     
     var body: some View {
         VStack {
             HStack(alignment: .top) {
                 VStack(alignment: .leading) {
-                    Text(title)
-                        .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.7))
-                    Text(episodeTitle)
-                        .font(.title2)
-                        .bold()
-                        .foregroundColor(.white)
-                }
+                                    Text(podcastTitle) // Use computed property
+                                        .font(.subheadline)
+                                        .foregroundColor(.white.opacity(0.7))
+                                    Text(episodeTitle) // Use computed property
+                                        .font(.title2)
+                                        .bold()
+                                        .foregroundColor(.white)
+                                }
                 Spacer()
-                Button(action: dismissAction) {
-                    Image(systemName: "xmark.circle.fill")
-                        .resizable()
-                        .frame(width: 25, height: 25)
-                        .foregroundColor(.white.opacity(0.7))
-                        .padding(10)
+                if isPlayedNow {
+                    Button(action: dismissAction!) {
+                        Image(systemName: "xmark.circle.fill")
+                            .resizable()
+                            .frame(width: 25, height: 25)
+                            .foregroundColor(.white.opacity(0.7))
+                            .padding(10)
+                    }
+                } else {
+                    // Add a chevron down or similar if it's part of a sheet
+                     Button {
+                         // Standard dismiss environment action could be used if presented via .sheet/.fullScreenCover
+                     } label: {
+                         Image(systemName: "chevron.down")
+                            .resizable().scaledToFit().frame(width: 20)
+                            .foregroundColor(.white.opacity(0.7))
+                            .padding()
+                     }
                 }
             }
             .padding()
@@ -50,7 +67,7 @@ struct PodcastPlayerView: View {
                     .resizable()
                     .scaledToFit()
                     .rotationEffect(.degrees(rotationAngle))
-                    .matchedGeometryEffect(id: "vinyl_disk_\(title)", in: namespace)
+                    .matchedGeometryEffect(id: "vinyl_disk_\(podcastTitle)", in: namespace)
                     .frame(width: UIScreen.main.bounds.width - 178)
                     .offset(x: UIScreen.main.bounds.width * -0.092, y: UIScreen.main.bounds.width * -0.004)
                     .zIndex(1)
@@ -65,41 +82,42 @@ struct PodcastPlayerView: View {
             Spacer()
             
             // Progress Bar
-            Slider(value: $playerTime, in: 0...duration, onEditingChanged: { editing in
+            Slider(value: $audioManager.currentTime, in: 0...(audioManager.duration > 0 ? audioManager.duration : 1.0), onEditingChanged: { editing in
                 if !editing {
-                    seek(to: playerTime)
+                    audioManager.seek(to: audioManager.currentTime)
                 }
             })
             .padding(.horizontal, 20)
             .accentColor(.blue)
+            .disabled(audioManager.duration <= 0 || audioManager.duration.isNaN)
             
             // Timestamp
             HStack {
-                Text(formatTime(playerTime))
-                    .foregroundColor(.white)
-                Spacer()
-                Text(formatTime(duration))
-                    .foregroundColor(.white)
-            }
-            .padding(.horizontal, 20)
+                            Text(audioManager.formatTime(audioManager.currentTime))
+                                .foregroundColor(.white)
+                            Spacer()
+                            Text(audioManager.formatTime(audioManager.duration))
+                                .foregroundColor(.white)
+                        }
+                        .padding(.horizontal, 20)
             
             // Player Controls (Centered)
             HStack(spacing: 40) {
-                Button(action: { seekRelative(-15) }) {
+                Button(action: { audioManager.seekRelative(-15) }) {
                     Image(systemName: "gobackward.15")
                         .resizable()
                         .frame(width: 35, height: 35)
                         .foregroundColor(.white)
                 }
                 
-                Button(action: { togglePlayPause() }) {
-                    Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                Button(action: { audioManager.togglePlayPause() }) {
+                    Image(systemName: audioManager.isPlaying ? "pause.circle.fill" : "play.circle.fill")
                         .resizable()
                         .frame(width: 50, height: 50)
                         .foregroundColor(.white)
                 }
                 
-                Button(action: { seekRelative(15) }) {
+                Button(action: { audioManager.seekRelative(15) }) {
                     Image(systemName: "goforward.15")
                         .resizable()
                         .frame(width: 35, height: 35)
@@ -112,77 +130,41 @@ struct PodcastPlayerView: View {
         }
         .background(Color.black)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onAppear {
-            let url = URL(string: audioUrl)!
-            player = AVPlayer(url: url)
-            setupPlayer()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                rotationTimer?.invalidate()
-                rotationTimer = Timer.scheduledTimer(withTimeInterval: 0.001, repeats: true) { _ in
-                    rotationAngle += 0.1 // Slower rotation
-                }
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                rotationTimer?.invalidate()
-            }
-        }
+//        .onAppear {
+//            let url = URL(string: audioUrl)!
+//            player = AVPlayer(url: url)
+//            setupPlayer()
+//            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+//                rotationTimer?.invalidate()
+//                rotationTimer = Timer.scheduledTimer(withTimeInterval: 0.001, repeats: true) { _ in
+//                    rotationAngle += 0.1 // Slower rotation
+//                }
+//            }
+//            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+//                rotationTimer?.invalidate()
+//            }
+//        }
+        .onAppear(perform: handleRotation)
+        .onChange(of: audioManager.isPlaying) { _ in handleRotation() }
+        .onDisappear { stopRotating() }
     }
-    
-    func togglePlayPause() {
-        if let player = player {
-            if player.timeControlStatus == .playing {
-                player.pause()
-                isPlaying = false
-                stopRotating()
-            } else {
-                player.play()
-                isPlaying = true
+    func handleRotation() {
+            if audioManager.isPlaying {
                 startRotating()
+            } else {
+                stopRotating()
             }
         }
-    }
-    
-    func startRotating() {
-        rotationTimer?.invalidate()
-        rotationTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
-            rotationAngle += 1 // Slower rotation
-        }
-    }
-    
-    func stopRotating() {
-        rotationTimer?.invalidate()
-    }
-    
-    func seek(to time: Double) {
-        player?.seek(to: CMTime(seconds: time, preferredTimescale: 1))
-    }
-    
-    func seekRelative(_ seconds: Double) {
-        if let player = player {
-            let currentTime = player.currentTime().seconds
-            let newTime = max(0, min(duration, currentTime + seconds))
-            seek(to: newTime)
-        }
-    }
-    
-    func setupPlayer() {
-        Task {
-            if let durationTime = try? await player?.currentItem?.asset.load(.duration) {
-                duration = CMTimeGetSeconds(durationTime)
-            }
-        }
-        
-        // Observe player time changes
-        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-            if let player = player {
-                playerTime = player.currentTime().seconds
-            }
-        }
-    }
-    
-    func formatTime(_ time: Double) -> String {
-        let minutes = Int(time) / 60
-        let seconds = Int(time) % 60
-        return String(format: "%02d:%02d", minutes, seconds)
-    }
+
+        func startRotating() {
+             guard rotationTimer == nil else { return } // Prevent multiple timers
+             rotationTimer = Timer.scheduledTimer(withTimeInterval: 0.02, repeats: true) { _ in // Adjust speed if needed
+                 rotationAngle += 1
+             }
+         }
+
+         func stopRotating() {
+             rotationTimer?.invalidate()
+             rotationTimer = nil
+         }
 }
